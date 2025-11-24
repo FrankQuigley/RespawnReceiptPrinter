@@ -9,7 +9,6 @@ import java.util.concurrent.TimeUnit;
 public class Main {
     
     private static HashSet<String> prevIDs = new HashSet<>();
-
     /* Uses scheduler to run every 60 seconds 
      * Creates a set of the 20 most recent transaction IDs and compares with previous
      * The new IDs are then checked for printable status 
@@ -18,6 +17,8 @@ public class Main {
     public static void main(String[] args){
         HttpClient client = HttpClient.newHttpClient();
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        
+        try {ReceiptHandler.printReceipt(ReceiptHandler.makeTest());}catch(Exception e){}
         scheduler.scheduleAtFixedRate(() -> {
             try {
                 String[] transactions = TransactionPoller.pollApi(client).split("\\},\\{");
@@ -28,10 +29,10 @@ public class Main {
                 
                 if(!prevIDs.isEmpty()){
                     HashSet<String> newIds = new HashSet<> (ids) ;
-                    newIds.removeAll(prevIDs) ;
-                    
+                    newIds.removeAll(prevIDs);
                     TransactionInterpreter.removeOffers(transactions, newIds).stream().forEach(o->{
                         try {
+                            System.out.println(o);
                             ReceiptHandler.printReceipt(o);
                         } catch (Exception e){
                             e.printStackTrace();
@@ -39,10 +40,11 @@ public class Main {
                     });
                 }
                 prevIDs = ids;
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 e.printStackTrace();
             }
         }, 0, 60, TimeUnit.SECONDS);
     }
+
 }
 

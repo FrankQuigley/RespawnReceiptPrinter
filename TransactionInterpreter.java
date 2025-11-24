@@ -18,14 +18,16 @@ public class TransactionInterpreter {
      * 
      * Lollies, Chocolate, Savoury + Biscuits, Cans, Coca-cola Bottles,
      * Redbull + V Energy, Monsters, Water, Tea, Milk, Powerade
-     * 
+     * prizes: wfood, drinks, snacks
      */
     private static final Set<String> includedCategories = 
     Set.of("7671f6e0-6401-4a51-87b1-232c284d5b7b","2746588c-4faf-46b8-ae03-22e057522f65",
            "413a61df-9d12-4bac-81c1-eccfe2244584", "eb552470-da82-4eb5-8383-9fa17fee33ff",
            "870e3beb-4ea2-40ed-96d2-9fa7d1973d46", "86fbb02d-7262-46b4-ba9e-04e55086ebd9",
            "ee3cb341-6fa1-480c-a5c0-1844ecef6dde", "c839660f-909e-4e61-92e9-683561a996e0",
-           "5c763fc4-1136-4e03-92f7-b8b3737c7014", "e74ba05b-8e97-42a8-8664-00b71ed455b7"
+           "5c763fc4-1136-4e03-92f7-b8b3737c7014", "e74ba05b-8e97-42a8-8664-00b71ed455b7",
+           "0b1af0e2-cda6-402f-94b2-5488af1e7008", "388a5ccd-2068-4506-98e5-d9865a4f480b",
+           "aac2f2e0-cab7-473a-87d0-8d3eb6d08351"
     );
      
     private static final Set<String> userCategories = 
@@ -77,7 +79,7 @@ public class TransactionInterpreter {
         while(s.charAt(index) != '\"'){
             time.append(s.charAt(index++) );
         }
-        return time.toString();
+        return time.toString().replace('T','\n').replace('Z', ' ');
     }
 
 
@@ -102,9 +104,29 @@ public class TransactionInterpreter {
         while(s.charAt(index) != '\"'){
             name.append(s.charAt(index++) );
         }
-
-        return name.toString();
+        return addNewLines(name);
         
+    }
+
+    public static String addNewLines(StringBuilder name){
+        int maxStringLength = 20;
+        if(name.length()>maxStringLength){
+            int prevIndex = 0;
+            int offset=0;
+            int currIndex=1;
+            boolean changed = false;
+            while(currIndex!=0){
+                currIndex = name.indexOf(" ", prevIndex);
+                if(currIndex>maxStringLength+offset || (currIndex==-1&&!changed)){
+                    name.replace(--prevIndex, ++prevIndex, "\n");
+                    changed =true;
+                    offset = prevIndex;
+                }
+                prevIndex=++currIndex;
+                
+            }
+        }
+        return name.toString();
     }
 
     public static String getItemQuantity(String s, int itemNum){
@@ -150,7 +172,7 @@ public class TransactionInterpreter {
                         order.setTime(getTime(originalTransaction));
                         printableOrders.add(order); 
                     }
-                    System.out.println("\nFull transaction : " + originalTransaction);
+                    //System.out.println("\nFull transaction : " + originalTransaction);
                     break;
                 }
 

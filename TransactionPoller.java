@@ -31,9 +31,13 @@ public class TransactionPoller {
                 response = client.send(request, HttpResponse.BodyHandlers.ofString());
                 assert response.statusCode() == 200;
                 System.out.println("\nJWT success");
-
+                //System.out.println(response.body());
                 JsonNode rootNode = mapper.readTree(response.body());
-                return rootNode.get("Jwt").asText();
+                try { 
+                    return rootNode.get("Jwt").asText();
+                } catch(NullPointerException npe){
+                    throw new Exception("Too many Requests");
+                }
 
             } catch (Exception e) {
                 e.printStackTrace();
