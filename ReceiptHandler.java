@@ -45,19 +45,19 @@ public class ReceiptHandler {
 
         // Build receipt with ESC/POS commands
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        out.write(INIT);       // reset printer
-        out.write(SIZE);       // Set font size
-        out.write(CENTER);     // center align
+        out.write(INIT);      
+        out.write(SIZE);       
+        out.write(CENTER);     
         out.write(spacer.getBytes("UTF-8"));
         out.write(header.getBytes("UTF-8"));
         out.write(time.getBytes("UTF-8"));
         out.write(user.getBytes("UTF-8"));
-        out.write(LEFT);       // back to left align
+        out.write(LEFT);      
         out.write(body.getBytes("UTF-8"));
         out.write("----------------------\n".getBytes("UTF-8"));
         out.write(employee.getBytes("UTF-8"));
-        out.write("\n\n\n".getBytes("UTF-8")); // some spacing before cut
-        out.write(CUT);        // send cut command
+        out.write("\n\n\n".getBytes("UTF-8")); 
+        out.write(CUT);       
 
         // Send to printer
         byte[] data = out.toByteArray();

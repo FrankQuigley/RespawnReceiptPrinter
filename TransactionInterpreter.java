@@ -27,7 +27,7 @@ public class TransactionInterpreter {
            "ee3cb341-6fa1-480c-a5c0-1844ecef6dde", "c839660f-909e-4e61-92e9-683561a996e0",
            "5c763fc4-1136-4e03-92f7-b8b3737c7014", "e74ba05b-8e97-42a8-8664-00b71ed455b7",
            "0b1af0e2-cda6-402f-94b2-5488af1e7008", "388a5ccd-2068-4506-98e5-d9865a4f480b",
-           "aac2f2e0-cab7-473a-87d0-8d3eb6d08351"
+           "aac2f2e0-cab7-473a-87d0-8d3eb6d08351","2281506d-aadc-4e29-916a-2e438a5e5f28"
     );
      
     private static final Set<String> userCategories = 
@@ -180,7 +180,8 @@ public class TransactionInterpreter {
                 while(s.charAt(index) != '\"'){
                     categoryBuilder.append(s.charAt(index++));
                 }
-                
+
+                System.out.println("\nCategory!!! : " + categoryBuilder);
                 if(includedCategories.contains(categoryBuilder.toString()) || 
                     (isUser(originalTransaction) && userCategories.contains(categoryBuilder.toString()))){
                     System.out.println("\nFound Printable Category!!! : " + categoryBuilder);
