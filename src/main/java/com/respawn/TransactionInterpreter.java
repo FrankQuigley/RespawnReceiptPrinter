@@ -2,8 +2,12 @@ package com.respawn;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 public class TransactionInterpreter {
@@ -44,157 +48,58 @@ public class TransactionInterpreter {
      * JSON object which stores a list of field data so fields don't need to
      * be directly addressed. 
      */
-    public static String getID(String s){
-        StringBuilder id = new StringBuilder();
-        int index = s.lastIndexOf("TransactionId\":\"") + 16;
-        while(s.charAt(index) != '\"'){
-            id.append(s.charAt(index++) );
-        }
-        return id.toString();
-    }
 
-    public static String getEmployee(String s){
-        if(isUser(s)){ return "";}
-        StringBuilder employee = new StringBuilder();
-        int index = s.indexOf("\"Name\":\"") + 8;
-        while(s.charAt(index) != '\"'){
-            employee.append(s.charAt(index++) );
-        }
-        return employee.toString();
-    }    
-
-    public static String getUser(String s){
-        if(s.contains("\"User\":null")){ return "Guest"; }
-        StringBuilder user = new StringBuilder();
-        int index = s.indexOf("\"Username\":\"") + 12;
-        while(s.charAt(index) != '\"'){
-            user.append(s.charAt(index++) );
-        }
-        return user.toString();
-    }
-
-    public static String getTime(String s){
-        StringBuilder time = new StringBuilder();
-        int index = s.indexOf("\"DateTime\":\"") + 12;
-        while(s.charAt(index) != '\"'){
-            time.append(s.charAt(index++) );
-        }
-        return time.toString().replace('T','\n').replace('Z', ' ');
-    }
-
-
-    /*
-     * Name is used to refer to several points of data
-     * so some instances need to be skipped
-     */
-    public static String getItemName(String s, int itemNum){
-        StringBuilder name = new StringBuilder();
-        for(int i = itemNum*2+1; i>0; i--){
-            int skipIndex = s.indexOf("\"Name\":\"") + 8;
-            int nullCheck = s.indexOf("\"Employee\":null") + 16;
-            if(nullCheck != 15 && nullCheck < skipIndex){
-                s = s.substring(nullCheck);
-                continue;
-            } 
-            s = s.substring(skipIndex);
-            
-        }
-
-        int index = s.indexOf("\"Name\":\"") + 8;
-        while(s.charAt(index) != '\"'){
-            name.append(s.charAt(index++) );
-        }
-        return addNewLines(name);
-        
-    }
-
-    public static String addNewLines(StringBuilder name){
-        int maxStringLength = 20;
-        if(name.length()>maxStringLength){
-            int prevIndex = 0;
-            int offset=0;
-            int currIndex=1;
-            boolean changed = false;
-            while(currIndex!=0){
-                currIndex = name.indexOf(" ", prevIndex);
-                if(currIndex>maxStringLength+offset || (currIndex==-1&&!changed)){
-                    name.replace(--prevIndex, ++prevIndex, "\n");
-                    changed =true;
-                    offset = prevIndex;
-                }
-                prevIndex=++currIndex;
-                
-            }
-        }
-        return name.toString();
-    }
-
-    public static String getItemQuantity(String s, int itemNum){
-        StringBuilder num = new StringBuilder();
-        for(int i = itemNum; i>0; i--){
-            int skipIndex = s.indexOf("\"Quantity\":") + 11;
-            s = s.substring(skipIndex);      
-        }
-
-        
-        int index = s.indexOf("\"Quantity\":") + 11;
-        while(s.charAt(index) != ','){
-            num.append(s.charAt(index++) );
-        }
-        return num.append("x ").toString();
-        
-    }
-
-    public static boolean isUser(String s){
-        return s.contains("\"Employee\":null");
-    }
     /*
      * Takes each order and loops through every item, adding it to the order
      * If ANY item meets the requirements of printing the whole order is added to
      * the print array and returned. 
      */
-    public static List<Order> removeOffers(String[] transactions, HashSet<String> targetIDs) throws Exception {
+     public static List<Order> removeOffers(String transactions, HashSet<String> targetIDs) throws Exception {
         List<Order> printableOrders = new ArrayList<>();
-        for(String s : transactions){
-            if(!targetIDs.contains(getID(s))){ continue; }
 
-            String originalTransaction = s;
-            int num = 0;
-            Order order = new Order();
-            Boolean printable = false;
-            while(true){
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode rootNode = mapper.readTree(transactions);
+        Iterator<String> fields = rootNode.fieldNames();
 
-                int index = s.indexOf("CategoryUuid\":\"") + 15;
-                if(index==14){
-                    if(printable){ 
-                        order.setEmployee(getEmployee(originalTransaction));
-                        order.setUser(getUser(originalTransaction));
-                        order.setTime(getTime(originalTransaction));
-                        printableOrders.add(order); 
+        String transactionsKey = fields.next();
+        JsonNode transactionsNode = rootNode.path(transactionsKey);
+
+        for (JsonNode transaction : transactionsNode) {
+            JsonNode itemsNode = transaction.path("Items");
+            Iterator<String> itemIds = itemsNode.fieldNames();
+            while (itemIds.hasNext()) {
+                String itemId = itemIds.next();
+                JsonNode item = itemsNode.get(itemId);
+                if(includedCategories.contains(item.get("CategoryUuid").asText())
+                    || (transaction.get("Source").isNull() 
+                    && userCategories.contains(item.get("CategoryUuid").asText()))){
+                    System.out.println(item.get("Name").asText() + " ordered. Printing Receipt. ");
+                        
+                    Order o = new Order();
+                    try{
+                        o.setEmployee(transaction.get("Source").asText());
+                        JsonNode userNode = transaction.path("User");
+
+                        o.setUser(userNode.get("Username").asText());
+                    
+                    } catch(java.lang.NullPointerException npe){
+
                     }
-                    //System.out.println("\nFull transaction : " + originalTransaction);
-                    break;
-                }
 
-                StringBuilder categoryBuilder = new StringBuilder();
-                while(s.charAt(index) != '\"'){
-                    categoryBuilder.append(s.charAt(index++));
-                }
 
-                System.out.println("\nCategory!!! : " + categoryBuilder);
-                if(includedCategories.contains(categoryBuilder.toString()) || 
-                    (isUser(originalTransaction) && userCategories.contains(categoryBuilder.toString()))){
-                    System.out.println("\nFound Printable Category!!! : " + categoryBuilder);
-                    printable = true; 
-                }
-                String item = getItemQuantity(originalTransaction, num);
-                item  += getItemName(originalTransaction, num++);
-                System.out.println("Item is : " +  item +"\n");
-                order.addItem(item);
+                    JsonNode detailsNode = transaction.path("Details");
 
-                s = s.substring(index);
+                    o.setTime(
+                        detailsNode.get("DateTime").asText().replace('T','\n').replace('Z', ' ')
+                    );
+
+                    printableOrders.add(o); 
+                }
             }
-        }    
-        return printableOrders;   
+        }
+        
+    return printableOrders;
     }
+
+    
 }
