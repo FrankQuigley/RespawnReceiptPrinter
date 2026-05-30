@@ -5,7 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-
 import javax.print.Doc;
 import javax.print.DocFlavor;
 import javax.print.PrintService;
