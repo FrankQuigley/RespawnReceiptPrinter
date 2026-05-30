@@ -41,13 +41,21 @@ public class TransactionInterpreter {
            "95a051e0-e572-48b9-ba77-1a30b392c345", "08fb3111-e138-4b7e-8c1d-1871ea97380d"
     );
 
-    /*
-     * The API defines items through unique IDs like above
-     * This makes referenceing the item difficult, thus the raw JSON string
-     * is instead searched and parsed. This could be improved with a generic
-     * JSON object which stores a list of field data so fields don't need to
-     * be directly addressed. 
-     */
+    public static HashSet<String> getIDs(String transactions) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode rootNode = mapper.readTree(transactions);
+        Iterator<String> fields = rootNode.fieldNames();
+        HashSet<String> ids = new HashSet<>();
+
+        String transactionsKey = fields.next();
+        JsonNode transactionsNode = rootNode.path(transactionsKey);
+        for (JsonNode transaction : transactionsNode) {
+            ids.add(transaction.get("TransactionId").asText());
+        }
+
+        return ids;
+
+    }
 
     /*
      * Takes each order and loops through every item, adding it to the order
@@ -65,38 +73,72 @@ public class TransactionInterpreter {
         JsonNode transactionsNode = rootNode.path(transactionsKey);
 
         for (JsonNode transaction : transactionsNode) {
+            if(!targetIDs.contains(
+                transaction.get("TransactionId").asText()
+            )){ continue; }
+
+            boolean printable = false;
             JsonNode itemsNode = transaction.path("Items");
             Iterator<String> itemIds = itemsNode.fieldNames();
+            /* Check for printability */
             while (itemIds.hasNext()) {
                 String itemId = itemIds.next();
                 JsonNode item = itemsNode.get(itemId);
                 if(includedCategories.contains(item.get("CategoryUuid").asText())
                     || (transaction.get("Source").isNull() 
-                    && userCategories.contains(item.get("CategoryUuid").asText()))){
-                    System.out.println(item.get("Name").asText() + " ordered. Printing Receipt. ");
-                        
-                    Order o = new Order();
-                    try{
-                        o.setEmployee(transaction.get("Source").asText());
-                        JsonNode userNode = transaction.path("User");
-
-                        o.setUser(userNode.get("Username").asText());
-                    
-                    } catch(java.lang.NullPointerException npe){
-
-                    }
-
-
+                    && userCategories.contains(item.get("CategoryUuid").asText()))
+                ){      
+                    printable = true;  
+                    break;                 
+                }
+            }
+            /* Build Order */
+            if(printable){
+                Order o = new Order();
+                itemIds = itemsNode.fieldNames();
+                while (itemIds.hasNext()) {
+                    JsonNode item = itemsNode.get(itemIds.next());
+                    o.addItem(item.get("Name").asText());
+                }
                     JsonNode detailsNode = transaction.path("Details");
+
+                    String employeeName = detailsNode
+                        .path("Employee")
+                        .path("Name")
+                        .asText("PC ORDER");
+
+                    String username = detailsNode
+                        .path("User")
+                        .path("Username")
+                        .asText("Guest");
+
+                    o.setEmployee(
+                        employeeName.isBlank() ? username : employeeName
+                    );
+
+                    o.setUser(username);
 
                     o.setTime(
                         detailsNode.get("DateTime").asText().replace('T','\n').replace('Z', ' ')
                     );
+                    for(String item : o.items() ){
+
+                        System.out.println(item);
+                    }
+                    
+                    /* 
+                    System.out.println(
+                        o.employee()
+                        + "\n" +
+                        o.user()
+                        + "\n" +
+                        o.time()
+                    );
+                    */
 
                     printableOrders.add(o); 
                 }
             }
-        }
         
     return printableOrders;
     }

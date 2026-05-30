@@ -18,15 +18,13 @@ public class Main {
         HttpClient client = HttpClient.newHttpClient();
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
         
-        try {ReceiptHandler.printReceipt(ReceiptHandler.makeTest());}catch(Exception e){}
+        //try {ReceiptHandler.printReceipt(ReceiptHandler.makeTest());}catch(Exception e){}
         scheduler.scheduleAtFixedRate(() -> {
             try {
-                String[] transactions = TransactionPoller.pollApi(client).split("\\},\\{");
-                HashSet<String> ids = new HashSet<>();
-                for(String s : transactions){
-                    ids.add(TransactionInterpreter.getID(s));
-                }
                 
+                String transactions = TransactionPoller.pollApi(client);
+                HashSet<String> ids = TransactionInterpreter.getIDs(transactions);
+                                
                 if(!prevIDs.isEmpty()){
                     HashSet<String> newIds = new HashSet<> (ids) ;
                     newIds.removeAll(prevIDs);
