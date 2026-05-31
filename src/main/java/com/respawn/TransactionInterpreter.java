@@ -98,7 +98,9 @@ public class TransactionInterpreter {
                 itemIds = itemsNode.fieldNames();
                 while (itemIds.hasNext()) {
                     JsonNode item = itemsNode.get(itemIds.next());
-                    o.addItem(item.get("Name").asText());
+                    String name = item.get("Name").asText();
+                    String quantity = item.get("Quantity").asText();
+                    o.addItem(quantity + "x " + name);
                 }
                     JsonNode detailsNode = transaction.path("Details");
 
