@@ -122,10 +122,9 @@ public class TransactionInterpreter {
                         detailsNode.get("DateTime").asText().replace('T','\n').replace('Z', ' ')
                     );
                     for(String item : o.items() ){
-
                         System.out.println(item);
                     }
-                    
+
                     /* 
                     System.out.println(
                         o.employee()

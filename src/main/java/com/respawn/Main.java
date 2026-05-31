@@ -6,9 +6,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import javax.swing.JOptionPane;
+
 public class Main {
     
     private static HashSet<String> prevIDs = new HashSet<>();
+
+    //private static boolean errorWindowOpened = false;
+
     /* Uses scheduler to run every 60 seconds 
      * Creates a set of the 20 most recent transaction IDs and compares with previous
      * The new IDs are then checked for printable status 
@@ -20,8 +25,7 @@ public class Main {
         
         //try {ReceiptHandler.printReceipt(ReceiptHandler.makeTest());}catch(Exception e){}
         scheduler.scheduleAtFixedRate(() -> {
-            try {
-                
+            try {            
                 String transactions = TransactionPoller.pollApi(client);
                 HashSet<String> ids = TransactionInterpreter.getIDs(transactions);
                                 
@@ -33,15 +37,28 @@ public class Main {
                             System.out.println(o);
                             ReceiptHandler.printReceipt(o);
                         } catch (Exception e){
-                            e.printStackTrace();
+                            handleError("Printing Receipt Failed", e);
                         }
                     });
                 }
                 prevIDs = ids;
             } catch (Throwable e) {
-                e.printStackTrace();
+                handleError("Main scheduler loop failed", e);
             }
         }, 0, 60, TimeUnit.SECONDS);
+    }
+
+    private static synchronized void handleError(String context, Throwable t) {
+        try {
+            JOptionPane.showMessageDialog(
+                    null,
+                    context + "\n\n" + t,
+                    "Respawn Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
 }
