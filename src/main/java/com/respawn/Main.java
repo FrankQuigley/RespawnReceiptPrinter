@@ -5,7 +5,11 @@ import java.util.HashSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
 
+import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
 
 public class Main {
@@ -22,6 +26,21 @@ public class Main {
     public static void main(String[] args){
         HttpClient client = HttpClient.newHttpClient();
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        try {
+            if (SystemTray.isSupported()) {
+                SystemTray tray = SystemTray.getSystemTray();
+
+                Image image = ImageIO.read(Main.class.getResource("/logo.png"));
+
+                TrayIcon trayIcon = new TrayIcon(image, "Receipt Printer");
+                trayIcon.setImageAutoSize(true);
+
+                tray.add(trayIcon);
+            }
+
+        } catch (Throwable e) {
+            handleError("Failed to generate tray image", e);
+        }
         
         //try {ReceiptHandler.printReceipt(ReceiptHandler.makeTest());}catch(Exception e){}
         scheduler.scheduleAtFixedRate(() -> {
