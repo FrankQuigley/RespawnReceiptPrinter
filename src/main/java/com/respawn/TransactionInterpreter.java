@@ -82,14 +82,18 @@ public class TransactionInterpreter {
             Iterator<String> itemIds = itemsNode.fieldNames();
             /* Check for printability */
             while (itemIds.hasNext()) {
+                JsonNode detailsNode = transaction.path("Details");
                 String itemId = itemIds.next();
                 JsonNode item = itemsNode.get(itemId);
                 if(includedCategories.contains(item.get("CategoryUuid").asText())
-                    || (transaction.get("Source").isNull() 
+                    || (detailsNode.get("Employee").isNull()
                     && userCategories.contains(item.get("CategoryUuid").asText()))
-                ){      
+                ){ 
+                    System.out.println("Order printable");     
                     printable = true;  
                     break;                 
+                } else {
+                    System.out.println("Order NOT printable \n" + detailsNode.get("Employee"));     
                 }
             }
             /* Build Order */
