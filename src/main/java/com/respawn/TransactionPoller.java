@@ -19,7 +19,7 @@ public class TransactionPoller {
     private static final String AUTH_TOKEN = "uMCkgHGyGQMBDuLTUjDGbpca8yKk1AvfRRNYoQ8vJ1kuX3k54Vr3yY9wjCckw2rOGSi+1kMDWMSnV0Yb6AStlXuFDyvJglskl/8x9cWPJruYTUn/R6GwmwmMnQXNwoNP";
     private static final ObjectMapper mapper = new ObjectMapper();
     
-    private static String getJWT(HttpClient client) throws Error{
+    private static String getJWT(HttpClient client) throws Exception{
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(AUTH_URL))
             .header("Accept", "application/json")
@@ -40,11 +40,10 @@ public class TransactionPoller {
                 }
 
             } catch (Exception e) {
-                e.printStackTrace();
+                throw e;
             } catch (AssertionError a) {
-                System.out.println("JWT POST fail : " + response);
+                throw new Exception("JWT POST fail : " + response); 
             }
-        throw new Error("Failed to obtain JWT!");
     }
 
     /*
@@ -68,10 +67,9 @@ public class TransactionPoller {
             return decompressGzip(response.body());
 
         } catch (Exception e) {
-            throw new Exception(); 
+            throw e; 
         } catch (AssertionError a) {
-            System.out.println("Transactions GET fail : " + response);
-            throw new Exception(); 
+            throw new Exception("Transactions GET fail : " + response); 
         }
     }
 

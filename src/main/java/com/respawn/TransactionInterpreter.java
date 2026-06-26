@@ -94,6 +94,7 @@ public class TransactionInterpreter {
                     break;                 
                 } else {
                     System.out.println("Order NOT printable \n" + detailsNode.get("Employee"));     
+                    System.out.println(item.get("CategoryUuid").asText() + " " + item.get("Name").asText());
                 }
             }
             /* Build Order */

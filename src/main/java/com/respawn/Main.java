@@ -1,13 +1,13 @@
 package com.respawn;
 
+import java.awt.Image;
+import java.awt.SystemTray;
+import java.awt.TrayIcon;
 import java.net.http.HttpClient;
 import java.util.HashSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.File;
 
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
@@ -24,7 +24,6 @@ public class Main {
      * The returned offers are then printed 
      */
     public static void main(String[] args){
-        HttpClient client = HttpClient.newHttpClient();
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
         try {
             if (SystemTray.isSupported()) {
@@ -44,6 +43,7 @@ public class Main {
         
         //try {ReceiptHandler.printReceipt(ReceiptHandler.makeTest());}catch(Exception e){}
         scheduler.scheduleAtFixedRate(() -> {
+            HttpClient client = HttpClient.newHttpClient();
             try {            
                 String transactions = TransactionPoller.pollApi(client);
                 HashSet<String> ids = TransactionInterpreter.getIDs(transactions);
@@ -61,7 +61,7 @@ public class Main {
                     });
                 }
                 prevIDs = ids;
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 handleError("Main scheduler loop failed", e);
             }
         }, 0, 60, TimeUnit.SECONDS);
