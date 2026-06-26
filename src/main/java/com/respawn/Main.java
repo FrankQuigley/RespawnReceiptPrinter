@@ -61,9 +61,9 @@ public class Main {
                     });
                 }
                 prevIDs = ids;
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 handleError("Main scheduler loop failed", e);
-            }
+            } 
         }, 0, 60, TimeUnit.SECONDS);
     }
 

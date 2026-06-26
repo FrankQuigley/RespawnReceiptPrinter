@@ -32,17 +32,21 @@ public class TransactionPoller {
                 assert response.statusCode() == 200;
                 System.out.println("\nJWT success");
                 //System.out.println(response.body());
+                
                 JsonNode rootNode = mapper.readTree(response.body());
                 try { 
-                    return rootNode.get("Jwt").asText();
+                    return rootNode.get("Jwt").asText();                  
                 } catch(NullPointerException npe){
                     throw new Exception("Too many Requests");
                 }
+                
 
             } catch (Exception e) {
                 throw e;
             } catch (AssertionError a) {
                 throw new Exception("JWT POST fail : " + response); 
+            } catch (Error e) {
+                throw new Exception(e.getMessage()); 
             }
     }
 
@@ -70,6 +74,8 @@ public class TransactionPoller {
             throw e; 
         } catch (AssertionError a) {
             throw new Exception("Transactions GET fail : " + response); 
+        } catch (Error e) {
+            throw new Exception(e.getMessage()); 
         }
     }
 
