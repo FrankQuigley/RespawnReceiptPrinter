@@ -13,7 +13,7 @@ import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
 
 public class Main {
-    
+    private static int apiFails = 0;
     private static HashSet<String> prevIDs = new HashSet<>();
 
     //private static boolean errorWindowOpened = false;
@@ -61,9 +61,16 @@ public class Main {
                     });
                 }
                 prevIDs = ids;
-            } catch (Throwable e) {
-                handleError("Main scheduler loop failed", e);
-            } 
+            } catch (Exception e) {
+                if(e.getMessage().startsWith("Transactions GET fail")){
+                    apiFails++;
+                    if(apiFails>5){ handleError("Main scheduler loop failed", e);}
+                } else {
+                    handleError("Main scheduler loop failed", e);
+                }
+            } catch (Throwable t){
+                handleError("Main scheduler loop failed", t);
+            }
         }, 0, 60, TimeUnit.SECONDS);
     }
 
@@ -75,6 +82,7 @@ public class Main {
                     "Respawn Error",
                     JOptionPane.ERROR_MESSAGE
             );
+            return;
         } catch (Exception ex) {
             ex.printStackTrace();
         }
