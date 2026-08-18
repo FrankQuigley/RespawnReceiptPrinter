@@ -63,6 +63,7 @@ public class Main {
                 prevIDs = ids;
             } catch (Exception e) {
                 if(e.getMessage().startsWith("Transactions GET fail")){
+                    System.out.println("API GET fail :(");
                     apiFails++;
                     if(apiFails>5){ handleError("Main scheduler loop failed", e);}
                 } else {
@@ -79,7 +80,7 @@ public class Main {
             JOptionPane.showMessageDialog(
                     null,
                     context + "\n\n" + t,
-                    "Respawn Error",
+                    "Respawn Error ( SCREENSHOT PLEASE, DON'T PANIC. IT WILL ALL BE OKAY :) )",
                     JOptionPane.ERROR_MESSAGE
             );
             return;
