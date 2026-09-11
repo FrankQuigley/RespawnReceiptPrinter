@@ -16,7 +16,7 @@ public class TransactionPoller {
 
     private static final String ENDPOINT_URL = "https://api.ggleap.com/beta/transactions/history";
     private static final String AUTH_URL = "https://api.ggleap.com/production/authorization/public-api/auth";
-    private static final String AUTH_TOKEN = "uMCkgHGyGQMBDuLTUjDGbpca8yKk1AvfRRNYoQ8vJ1kuX3k54Vr3yY9wjCckw2rOGSi+1kMDWMSnV0Yb6AStlXuFDyvJglskl/8x9cWPJruYTUn/R6GwmwmMnQXNwoNP";
+    private static final String AUTH_TOKEN = "SuperSecretPassword";
     private static final ObjectMapper mapper = new ObjectMapper();
     
     private static String getJWT(HttpClient client) throws Exception{
