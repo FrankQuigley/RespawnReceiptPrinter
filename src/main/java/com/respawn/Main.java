@@ -8,11 +8,16 @@ import java.util.HashSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 public class Main {
+    private static final AtomicBoolean dialogOpen = new AtomicBoolean(false);
+    private static final HttpClient client = HttpClient.newHttpClient();
+
     private static int apiFails = 0;
     private static HashSet<String> prevIDs = new HashSet<>();
 
@@ -43,50 +48,49 @@ public class Main {
         
         //try {ReceiptHandler.printReceipt(ReceiptHandler.makeTest());}catch(Exception e){}
         scheduler.scheduleAtFixedRate(() -> {
-            HttpClient client = HttpClient.newHttpClient();
-            try {            
+            try {
                 String transactions = TransactionPoller.pollApi(client);
+                apiFails = 0; // reset after a success
                 HashSet<String> ids = TransactionInterpreter.getIDs(transactions);
-                                
-                if(!prevIDs.isEmpty()){
-                    HashSet<String> newIds = new HashSet<> (ids) ;
+
+                if (!prevIDs.isEmpty()) {
+                    HashSet<String> newIds = new HashSet<>(ids);
                     newIds.removeAll(prevIDs);
-                    TransactionInterpreter.removeOffers(transactions, newIds).stream().forEach(o->{
+                    for (Order o : TransactionInterpreter.removeOffers(transactions, newIds)) {
                         try {
                             System.out.println(o);
                             ReceiptHandler.printReceipt(o);
-                        } catch (Exception e){
+                        } catch (Exception e) {
                             handleError("Printing Receipt Failed", e);
                         }
-                    });
+                    }
                 }
                 prevIDs = ids;
-            } catch (Exception e) {
-                if(e.getMessage().startsWith("Transactions GET fail")){
-                    System.out.println("API GET fail :(");
+            } catch (Throwable t) {
+                String msg = String.valueOf(t.getMessage()); 
+                System.out.println("Poll failed: " + t);
+                if (msg.startsWith("Transactions GET fail") || msg.startsWith("JWT POST fail")) {
                     apiFails++;
-                    if(apiFails>5){ handleError("Main scheduler loop failed", e);}
+                    if (apiFails > 5) handleError("API failing repeatedly", t);
                 } else {
-                    handleError("Main scheduler loop failed", e);
+                    handleError("Main scheduler loop failed", t);
                 }
-            } catch (Throwable t){
-                handleError("Main scheduler loop failed", t);
             }
         }, 0, 60, TimeUnit.SECONDS);
     }
 
-    private static synchronized void handleError(String context, Throwable t) {
-        try {
-            JOptionPane.showMessageDialog(
-                    null,
-                    context + "\n\n" + t,
+    private static void handleError(String context, Throwable t) {
+        t.printStackTrace();
+        if (!dialogOpen.compareAndSet(false, true)) return; 
+        SwingUtilities.invokeLater(() -> {
+            try {
+                JOptionPane.showMessageDialog(null, context + "\n\n" + t,
                     "Respawn Error ( SCREENSHOT PLEASE, DON'T PANIC. IT WILL ALL BE OKAY :) )",
-                    JOptionPane.ERROR_MESSAGE
-            );
-            return;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+                    JOptionPane.ERROR_MESSAGE);
+            } finally {
+                dialogOpen.set(false);
+            }
+        });
     }
 
 }
