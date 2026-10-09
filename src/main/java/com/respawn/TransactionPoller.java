@@ -8,7 +8,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.zip.GZIPInputStream;
-
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -19,81 +20,67 @@ public class TransactionPoller {
     private static final String AUTH_TOKEN = "SuperSecretPassword";
     private static final ObjectMapper mapper = new ObjectMapper();
     
-    private static String getJWT(HttpClient client) throws Exception{
+    private static String getJWT(HttpClient client) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(AUTH_URL))
+            .timeout(Duration.ofSeconds(20))
             .header("Accept", "application/json")
             .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString("{\"AuthToken\": \""+AUTH_TOKEN+"\"}"))
+            .POST(HttpRequest.BodyPublishers.ofString("{\"AuthToken\": \"" + AUTH_TOKEN + "\"}"))
             .build();
-            HttpResponse<String> response = null;
-            try { 
-                response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                assert response.statusCode() == 200;
-                System.out.println("\nJWT success");
-                //System.out.println(response.body());
-                
-                JsonNode rootNode = mapper.readTree(response.body());
-                try { 
-                    return rootNode.get("Jwt").asText();                  
-                } catch(NullPointerException npe){
-                    throw new Exception("Too many Requests");
-                }
-                
 
-            } catch (Exception e) {
-                throw e;
-            } catch (AssertionError a) {
-                throw new Exception("JWT POST fail : " + response); 
-            } catch (Error e) {
-                throw new Exception(e.getMessage()); 
-            }
+        HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        String body = readBody(response.body());
+
+        if (response.statusCode() != 200) {
+            throw new Exception("JWT POST fail : " + response.statusCode() + " " + preview(body));
+        }
+
+        JsonNode jwt = mapper.readTree(body).get("Jwt");
+        if (jwt == null || jwt.isNull()) {
+            throw new Exception("JWT POST fail : no Jwt in response " + preview(body));
+        }
+        System.out.println("\nJWT success");
+        return jwt.asText();
     }
 
-    /*
-     * Gets transactions history from API, in future could use filtered transactions but currently throws 500
-     *  
-     */
     public static String pollApi(HttpClient client) throws Exception {
-        String JWT = getJWT(client);
+        String jwt = getJWT(client);
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(ENDPOINT_URL))
-            .header("Authorization", "Bearer "+JWT)
+            .timeout(Duration.ofSeconds(30))
+            .header("Authorization", "Bearer " + jwt)
             .header("Accept", "application/json")
-            .header("Content-Type", "application/json")
+            .header("Accept-Encoding", "gzip")
             .build();
 
-        HttpResponse<byte[]> response = null;
-        try { 
-            response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
-            assert response.statusCode() == 200;
-            System.out.println("Response Received! " + response);
-            return decompressGzip(response.body());
+        HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        String body = readBody(response.body());
 
-        } catch (Exception e) {
-            throw e; 
-        } catch (AssertionError a) {
-            throw new Exception("Transactions GET fail : " + response); 
-        } catch (Error e) {
-            throw new Exception(e.getMessage()); 
+        if (response.statusCode() != 200) {
+            throw new Exception("Transactions GET fail : " + response.statusCode() + " " + preview(body));
+        }
+        System.out.println("Response Received! " + response);
+        return body;
+    }
+
+    /* Check bytes for GZIP to avoid error */
+    private static String readBody(byte[] bytes) throws Exception {
+
+        boolean isGzip = bytes.length >= 2
+            && (bytes[0] & 0xFF) == 0x1F
+            && (bytes[1] & 0xFF) == 0x8B;
+        if (!isGzip) {
+            return new String(bytes, StandardCharsets.UTF_8);
+        }
+        System.out.println("IS GZIP");
+        try (GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(bytes))) {
+            return new String(gis.readAllBytes(), StandardCharsets.UTF_8);
         }
     }
 
-    /*
-     * Transactions are returned Gzip encoded so must be decompressed first
-     */
-    private static String decompressGzip(byte[] compressed) throws Exception {
-        try (GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(compressed));
-        InputStreamReader reader = new InputStreamReader(gis, java.nio.charset.StandardCharsets.UTF_8);
-        BufferedReader in = new BufferedReader(reader)) {
-            
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = in.readLine()) != null) {
-                sb.append(line);
-            }
-            return sb.toString();
-        }
+    private static String preview(String s) {
+        return s.length() > 300 ? s.substring(0, 300) + "..." : s;
     }
 
 
